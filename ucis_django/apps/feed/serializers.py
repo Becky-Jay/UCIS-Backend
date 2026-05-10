@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Post, Reaction, Comment
+from .models import Post, Reaction, Comment, Story
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -43,3 +43,23 @@ class PostCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ('title', 'content', 'college', 'target_roles', 'tags')
+
+
+class StorySerializer(serializers.ModelSerializer):
+    posted_by_name = serializers.CharField(source='posted_by.username', read_only=True)
+    view_count = serializers.SerializerMethodField()
+    has_viewed = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Story
+        fields = '__all__'
+        read_only_fields = ('posted_by', 'viewers', 'created_at')
+
+    def get_view_count(self, obj):
+        return obj.viewers.count()
+
+    def get_has_viewed(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.viewers.filter(pk=request.user.pk).exists()
+        return False

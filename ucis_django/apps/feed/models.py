@@ -43,3 +43,27 @@ class Comment(models.Model):
     class Meta:
         db_table = 'post_comments'
         ordering = ['created_at']
+
+
+class Story(models.Model):
+    MEDIA_TYPE_CHOICES = [('image', 'Image'), ('video', 'Video'), ('text', 'Text')]
+
+    posted_by = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='stories')
+    content = models.TextField(blank=True)
+    media_url = models.URLField(blank=True)
+    media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES, default='text')
+    background_color = models.CharField(max_length=20, blank=True, default='#1a1a2e')
+    viewers = models.ManyToManyField('users.User', related_name='viewed_stories', blank=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'stories'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.posted_by.username} story ({self.created_at.date()})'
+
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at

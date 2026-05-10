@@ -32,6 +32,8 @@ def register(request):
 
     user = serializer.save()
     access, refresh = _get_tokens(user)
+    profile = user.profile
+    profile.refresh_from_db()
 
     return Response({
         'message': 'User registered successfully',
@@ -43,8 +45,8 @@ def register(request):
             'role': user.role,
             'college': user.college,
             'profile': {
-                'firstName': user.profile.first_name,
-                'lastName': user.profile.last_name,
+                'firstName': profile.first_name,
+                'lastName': profile.last_name,
             },
         },
     }, status=status.HTTP_201_CREATED)

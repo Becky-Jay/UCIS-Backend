@@ -4,8 +4,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from .models import Post, Reaction, Comment
-from .serializers import PostSerializer, PostCreateSerializer, CommentSerializer, ReactionSerializer
+from django.utils import timezone
+from datetime import timedelta
+from .models import Post, Reaction, Comment, Story
+from .serializers import PostSerializer, PostCreateSerializer, CommentSerializer, ReactionSerializer, StorySerializer
 
 
 class PostListCreateView(generics.ListCreateAPIView):
@@ -105,3 +107,49 @@ def delete_comment(request, pk, comment_pk):
         return Response({'message': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
     comment.delete()
     return Response({'message': 'Comment deleted'})
+
+
+class StoryListCreateView(generics.ListCreateAPIView):
+    serializer_class = StorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Story.objects.filter(
+            expires_at__gt=timezone.now()
+        ).select_related('posted_by').prefetch_related('viewers')
+
+    def get_serializer_context(self):
+        return {**super().get_serializer_context(), 'request': self.request}
+
+    def perform_create(self, serializer):
+        serializer.save(
+            posted_by=self.request.user,
+            expires_at=timezone.now() + timedelta(hours=24),
+        )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({'message': 'Stories fetched', 'stories': serializer.data})
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        return Response({'message': 'Story posted', 'story': response.data}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def view_story(request, pk):
+    story = get_object_or_404(Story, pk=pk, expires_at__gt=timezone.now())
+    story.viewers.add(request.user)
+    return Response({'message': 'Story viewed', 'view_count': story.viewers.count()})
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_story(request, pk):
+    story = get_object_or_404(Story, pk=pk)
+    if story.posted_by != request.user and request.user.role not in ('system_admin', 'college_admin'):
+        return Response({'message': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+    story.delete()
+    return Response({'message': 'Story deleted'}, status=status.HTTP_204_NO_CONTENT)

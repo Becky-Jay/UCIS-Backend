@@ -38,6 +38,11 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.audit_logs',
     'apps.dashboard',
+    'apps.campus',
+    'apps.jobs',
+    'apps.academics',
+    'apps.connections',
+    'apps.feedback',
 ]
 
 MIDDLEWARE = [

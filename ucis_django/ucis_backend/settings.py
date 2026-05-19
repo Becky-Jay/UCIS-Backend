@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'apps.academics',
     'apps.connections',
     'apps.feedback',
+    'apps.organizations',
+    'apps.chat',
 ]
 
 MIDDLEWARE = [

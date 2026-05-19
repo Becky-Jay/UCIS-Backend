@@ -12,7 +12,10 @@ import jwt
 
 from apps.users.models import User
 from utils.email_service import send_email
-from .serializers import RegisterSerializer, LoginSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
+from .serializers import (
+    RegisterSerializer, LoginSerializer, ForgotPasswordSerializer,
+    ResetPasswordSerializer, ChangePasswordSerializer, TokenRefreshSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -160,3 +163,65 @@ def logout(request):
     except Exception:
         pass
     return Response({'message': 'Logged out successfully'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def me(request):
+    user = request.user
+    profile = getattr(user, 'profile', None)
+    return Response({
+        'message': 'User fetched',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role,
+            'college': user.college,
+            'last_active': user.last_active,
+            'profile': {
+                'firstName': profile.first_name if profile else '',
+                'lastName': profile.last_name if profile else '',
+                'department': profile.department if profile else '',
+                'graduationYear': profile.graduation_year if profile else None,
+                'registrationNumber': profile.registration_number if profile else '',
+                'phone': profile.phone if profile else '',
+                'bio': profile.bio if profile else '',
+                'profilePicture': profile.profile_picture if profile else '',
+                'mentorshipAvailability': profile.mentorship_availability if profile else False,
+                'interests': profile.interests if profile else [],
+                'notificationPreferences': profile.notification_preferences if profile else {},
+            } if profile else {},
+        },
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    serializer = ChangePasswordSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'message': 'Validation failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = request.user
+    if not user.check_password(serializer.validated_data['current_password']):
+        return Response({'message': 'Current password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(serializer.validated_data['new_password'])
+    user.save()
+    return Response({'message': 'Password changed successfully'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def token_refresh(request):
+    serializer = TokenRefreshSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'message': 'Validation failed', 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        refresh = RefreshToken(serializer.validated_data['refresh'])
+        access = str(refresh.access_token)
+        return Response({'message': 'Token refreshed', 'token': access})
+    except Exception:
+        return Response({'message': 'Invalid or expired refresh token'}, status=status.HTTP_401_UNAUTHORIZED)

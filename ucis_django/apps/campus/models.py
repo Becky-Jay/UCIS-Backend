@@ -42,3 +42,21 @@ class CampusLocation(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.get_category_display()})'
+
+
+class LocationSearchHistory(models.Model):
+    location = models.ForeignKey(
+        CampusLocation, on_delete=models.CASCADE, related_name='search_history'
+    )
+    user = models.ForeignKey(
+        'users.User', on_delete=models.CASCADE, related_name='location_searches'
+    )
+    searched_at = models.DateTimeField(auto_now_add=True)
+    search_query = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        db_table = 'location_search_history'
+        ordering = ['-searched_at']
+
+    def __str__(self):
+        return f'{self.user.username} searched "{self.search_query}"'

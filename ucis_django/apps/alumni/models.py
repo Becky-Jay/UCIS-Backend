@@ -21,3 +21,27 @@ class AlumniProfile(models.Model):
 
     def __str__(self):
         return f'{self.user.username} - Alumni {self.graduation_year}'
+
+
+class AlumniConnection(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+    ]
+
+    alumni_1 = models.ForeignKey(
+        AlumniProfile, on_delete=models.CASCADE, related_name='connections_initiated'
+    )
+    alumni_2 = models.ForeignKey(
+        AlumniProfile, on_delete=models.CASCADE, related_name='connections_received'
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    connected_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'alumni_connections'
+        unique_together = ('alumni_1', 'alumni_2')
+
+    def __str__(self):
+        return f'{self.alumni_1.user.username} ↔ {self.alumni_2.user.username} ({self.status})'

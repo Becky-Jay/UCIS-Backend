@@ -157,3 +157,65 @@ class CollegeAdminEngagement(models.Model):
 
     class Meta:
         db_table = 'college_admin_engagement'
+
+
+class Permission(models.Model):
+    permission_name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'permissions'
+
+    def __str__(self):
+        return self.permission_name
+
+
+class UserRole(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_roles')
+    role_name = models.CharField(max_length=50)
+
+    class Meta:
+        db_table = 'user_roles'
+        unique_together = ('user', 'role_name')
+
+    def __str__(self):
+        return f'{self.user.username} — {self.role_name}'
+
+
+class RolePermission(models.Model):
+    role_name = models.CharField(max_length=50)
+    permission = models.ForeignKey(Permission, on_delete=models.CASCADE, related_name='role_permissions')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'role_permissions'
+        unique_together = ('role_name', 'permission')
+
+    def __str__(self):
+        return f'{self.role_name} → {self.permission.permission_name}'
+
+
+class ExternalSystem(models.Model):
+    system_name = models.CharField(max_length=200)
+    system_url = models.URLField()
+    icon = models.CharField(max_length=100, blank=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'external_systems'
+
+    def __str__(self):
+        return self.system_name
+
+
+class SystemAccess(models.Model):
+    system = models.ForeignKey(ExternalSystem, on_delete=models.CASCADE, related_name='access_rules')
+    role_name = models.CharField(max_length=50)
+
+    class Meta:
+        db_table = 'system_access'
+        unique_together = ('system', 'role_name')
+
+    def __str__(self):
+        return f'{self.system.system_name} → {self.role_name}'

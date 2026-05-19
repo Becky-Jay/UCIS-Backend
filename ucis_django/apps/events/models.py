@@ -51,3 +51,17 @@ class Event(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class EventSubscription(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='subscriptions')
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='event_subscriptions')
+    subscribed_at = models.DateTimeField(auto_now_add=True)
+    reminder_enabled = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'event_subscriptions'
+        unique_together = ('event', 'user')
+
+    def __str__(self):
+        return f'{self.user.username} → {self.event.title}'
